@@ -10,7 +10,7 @@ const generateToken = (id) => {
 
 const registerUser = async (req, res) => {
     try {
-        const { name, email, password, college, branch, year } = req.body;
+        const { name, email, password, college, branch, year, skills, interests } = req.body;
 
         if (!name || !email || !password) {
             return res.status(400).json({ message: "Please fill all required fields" });
@@ -30,6 +30,8 @@ const registerUser = async (req, res) => {
             college,
             branch,
             year,
+            skills,
+            interests,
         });
 
         res.status(201).json({
