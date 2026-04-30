@@ -9,7 +9,7 @@ const User = require("../models/User");
 router.post("/send/:receiverId", protect, async (req, res) => {
     try {
         const { receiverId } = req.params;
-        const { message } = req.body;
+        const { message = "" } = req.body || {};
 
         if (receiverId === req.user._id.toString()) {
             return res.status(400).json({ message: "You cannot send request to yourself" });
