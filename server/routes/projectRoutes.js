@@ -34,6 +34,155 @@ router.post("/", protect, async (req, res) => {
     }
 });
 
+// Apply to Project
+router.post("/:id/apply", protect, async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id);
+
+        if (!project) {
+            return res.status(404).json({ message: "Project not found" });
+        }
+
+        //  Khud ke project me apply nahi kar sakte
+        if (project.createdBy.toString() === req.user._id.toString()) {
+            return res.status(400).json({
+                message: "You cannot apply to your own project",
+            });
+        }
+
+        // ❌ Already member hai
+        if (project.members.includes(req.user._id)) {
+            return res.status(400).json({
+                message: "You are already a member",
+            });
+        }
+
+        // Already applied
+        const alreadyApplied = project.applications.find(
+            (app) => app.user.toString() === req.user._id.toString()
+        );
+
+        if (alreadyApplied) {
+            return res.status(400).json({
+                message: "You have already applied",
+            });
+        }
+
+        // Add application
+        const { message = "" } = req.body || {};
+
+        project.applications.push({
+            user: req.user._id,
+            message: message,
+        });
+
+        await project.save();
+
+        res.json({
+            message: "Applied to project successfully",
+            project,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get Project Applications
+router.get("/:id/applications", protect, async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id).populate(
+            "applications.user",
+            "name email college branch year skills interests"
+        );
+
+        if (!project) {
+            return res.status(404).json({ message: "Project not found" });
+        }
+
+        if (project.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                message: "Only project owner can view applications",
+            });
+        }
+
+        res.json(project.applications);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Accept Project Application
+router.put("/:projectId/applications/:appId/accept", protect, async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId);
+
+        if (!project) {
+            return res.status(404).json({ message: "Project not found" });
+        }
+
+        if (project.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                message: "Only project owner can accept applications",
+            });
+        }
+
+        const application = project.applications.id(req.params.appId);
+
+        if (!application) {
+            return res.status(404).json({ message: "Application not found" });
+        }
+
+        application.status = "accepted";
+
+        if (!project.members.includes(application.user)) {
+            project.members.push(application.user);
+        }
+
+        await project.save();
+
+        res.json({
+            message: "Application accepted successfully",
+            project,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Reject Project Application
+router.put("/:projectId/applications/:appId/reject", protect, async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.projectId);
+
+        if (!project) {
+            return res.status(404).json({ message: "Project not found" });
+        }
+
+        if (project.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                message: "Only project owner can reject applications",
+            });
+        }
+
+        const application = project.applications.id(req.params.appId);
+
+        if (!application) {
+            return res.status(404).json({ message: "Application not found" });
+        }
+
+        application.status = "rejected";
+
+        await project.save();
+
+        res.json({
+            message: "Application rejected successfully",
+            project,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // Get All Projects
 router.get("/", protect, async (req, res) => {
     try {
